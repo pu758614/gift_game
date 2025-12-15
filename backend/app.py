@@ -12,18 +12,9 @@ app.config.from_object(Config)
 CORS(app, origins=Config.CORS_ORIGINS)
 db.init_app(app)
 
-# 確保上傳目錄存在
-os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-
 # 創建資料表
 with app.app_context():
     db.create_all()
-
-
-@app.route('/uploads/<path:filename>')
-def serve_upload(filename):
-    """提供上傳的圖片檔案"""
-    return send_from_directory(Config.UPLOAD_FOLDER, filename)
 
 
 @app.route('/api/health', methods=['GET'])
@@ -98,14 +89,12 @@ def generate_gift(gift_id):
             gift.who_likes
         )
 
-        # 使用 Gemini Imagen API 生成圖片
-        image_filename = gemini_service.generate_gift_image(image_prompt)
-        if not image_filename:
+        # 使用 AI 生成圖片並上傳到 MinIO
+        image_url = gemini_service.generate_gift_image(image_prompt)
+        if not image_url:
             raise Exception("圖片生成失敗")
-        # 使用相對路徑，讓前端可以根據當前host訪問
-        image_url = f"/uploads/{image_filename}" if image_filename else None
 
-        # 更新禮物記錄
+        # 更新禮物記錄 (image_url 已是完整的 MinIO URL)
         gift.ai_guess = ai_guess
         gift.image_url = image_url
         db.session.commit()
@@ -139,11 +128,11 @@ def regenerate_gift(gift_id):
             gift.appearance,
             gift.who_likes
         )
-        image_filename = gemini_service.generate_gift_image(image_prompt)
-        # 使用相對路徑，讓前端可以根據當前host訪問
-        image_url = f"/uploads/{image_filename}" if image_filename else None
+        image_url = gemini_service.generate_gift_image(image_prompt)
+        if not image_url:
+            raise Exception("圖片生成失敗")
 
-        # 更新記錄
+        # 更新記錄 (image_url 已是完整的 MinIO URL)
         gift.ai_guess = ai_guess
         gift.image_url = image_url
         db.session.commit()

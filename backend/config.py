@@ -27,7 +27,15 @@ class Config:
     # 圖片生成引擎選擇: 'openai' 或 'gemini'
     IMAGE_GENERATION_ENGINE = os.getenv('IMAGE_GENERATION_ENGINE', 'openai')
 
-    # 上傳檔案設定
+    # MinIO 設定
+    MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'minio:9000')
+    MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
+    MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
+    MINIO_BUCKET = os.getenv('MINIO_BUCKET', 'gift-images')
+    MINIO_USE_SSL = os.getenv('MINIO_USE_SSL', 'false').lower() == 'true'
+    MINIO_PUBLIC_URL = os.getenv('MINIO_PUBLIC_URL', 'http://localhost:9000')
+
+    # 上傳檔案設定 (保留以向後相容)
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 

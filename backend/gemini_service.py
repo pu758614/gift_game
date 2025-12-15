@@ -1,17 +1,19 @@
 import os
 import time
 import requests
+from io import BytesIO
 from pathlib import Path
 import google.generativeai as genai
 from openai import OpenAI
+from minio import Minio
 from config import Config
 
 
 class GeminiService:
-    """AI 服務類（Gemini 用於文字，OpenAI 用於圖片）"""
+    """AI 服務類（Gemini 用於文字，OpenAI 用於圖片，MinIO 用於儲存）"""
 
     def __init__(self):
-        """初始化 AI APIs"""
+        """初始化 AI APIs 和 MinIO"""
         # Gemini 用於文字生成
         gemini_key = Config.GEMINI_API_KEY
         if gemini_key:
@@ -25,7 +27,7 @@ class GeminiService:
 
         # OpenAI 客戶端
         openai_key = Config.OPENAI_API_KEY
-        print(f"OpenAI API Key: {openai_key}", flush=True)
+        print(f"OpenAI API Key configured: {bool(openai_key)}", flush=True)
         if openai_key:
             os.environ['OPENAI_API_KEY'] = openai_key
             self.openai_client = OpenAI()
@@ -43,6 +45,26 @@ class GeminiService:
                 self.genai_imagen_client = None
         else:
             self.genai_imagen_client = None
+
+        # MinIO 客戶端
+        try:
+            self.minio_client = Minio(
+                Config.MINIO_ENDPOINT,
+                access_key=Config.MINIO_ACCESS_KEY,
+                secret_key=Config.MINIO_SECRET_KEY,
+                secure=Config.MINIO_USE_SSL
+            )
+            self.minio_bucket = Config.MINIO_BUCKET
+            print(
+                f"MinIO client initialized: {Config.MINIO_ENDPOINT}/{self.minio_bucket}", flush=True)
+
+            # 確認 bucket 存在
+            if not self.minio_client.bucket_exists(self.minio_bucket):
+                print(
+                    f"Warning: Bucket {self.minio_bucket} does not exist", flush=True)
+        except Exception as e:
+            print(f"Error initializing MinIO: {e}", flush=True)
+            self.minio_client = None
 
     def guess_gift(self, appearance, who_likes, usage_time):
         """根據描述猜測禮物"""
@@ -96,78 +118,98 @@ class GeminiService:
             print(f"生成圖片提示詞錯誤: {str(e)}")
             return f"A beautiful {gift_name} with festive wrapping and warm lighting"
 
-    def generate_gift_image(self, prompt, output_dir="uploads"):
-        """使用選定的引擎生成圖片"""
+    def generate_gift_image(self, prompt, output_dir=None):
+        """使用選定的引擎生成圖片並上傳到 MinIO"""
         try:
-            # 建立輸出目錄
-            Path(output_dir).mkdir(exist_ok=True)
-
-            print(f"Image generation engine: {self.image_engine}")
+            print(f"Image generation engine: {self.image_engine}", flush=True)
 
             if self.image_engine == 'gemini':
-                return self._generate_with_gemini(prompt, output_dir)
+                return self._generate_with_gemini(prompt)
             else:  # 預設使用 openai
-                return self._generate_with_openai(prompt, output_dir)
+                return self._generate_with_openai(prompt)
 
         except Exception as e:
-            print(f"✗ Failed to generate image: {e}")
+            print(f"✗ Failed to generate image: {e}", flush=True)
             import traceback
             traceback.print_exc()
             return None
 
-    def _generate_with_openai(self, prompt, output_dir):
-        """使用 OpenAI DALL-E 3 生成圖片"""
+    def _generate_with_openai(self, prompt):
+        """使用 OpenAI DALL-E 生成圖片並上傳到 MinIO"""
         if not self.openai_client:
-            print("✗ OpenAI client not initialized")
+            print("✗ OpenAI client not initialized", flush=True)
             return None
 
-        print(f"Generating image with DALL-E 3...")
-        print(f"Prompt: {prompt}")
+        if not self.minio_client:
+            print("✗ MinIO client not initialized", flush=True)
+            return None
 
-        # 使用 DALL-E 3 生成圖片
+        print(f"Generating image with DALL-E...", flush=True)
+        print(f"Prompt: {prompt}", flush=True)
+
+        # 使用 DALL-E 2 生成圖片
         response = self.openai_client.images.generate(
-            model="dall-e-3",
+            model="dall-e-2",
             prompt=prompt,
             size="1024x1024",
-            quality="hd",
             n=1,
         )
 
         # 獲取圖片 URL
         image_url = response.data[0].url
-        print(f"Image URL: {image_url}")
+        print(f"Image URL: {image_url}", flush=True)
 
-        # 下載圖片
+        # 下載圖片到記憶體
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            print(f"✗ Failed to download image: {image_response.status_code}")
+            print(
+                f"✗ Failed to download image: {image_response.status_code}", flush=True)
             return None
 
-        # 儲存圖片
+        # 準備上傳到 MinIO
+        image_data = BytesIO(image_response.content)
+        image_size = len(image_response.content)
+
         timestamp = int(time.time())
         filename = f"gift_image_{timestamp}_0.png"
-        filepath = os.path.join(output_dir, filename)
 
-        with open(filepath, 'wb') as f:
-            f.write(image_response.content)
+        # 上傳到 MinIO
+        try:
+            self.minio_client.put_object(
+                self.minio_bucket,
+                filename,
+                image_data,
+                length=image_size,
+                content_type='image/png'
+            )
 
-        # 獲取檔案大小
-        file_size = os.path.getsize(filepath) / 1024  # KB
+            # 回傳完整 URL
+            minio_url = f"{Config.MINIO_PUBLIC_URL}/{self.minio_bucket}/{filename}"
 
-        print(f"✓ Image generated successfully with OpenAI!")
-        print(f"  File: {filepath}")
-        print(f"  Size: {file_size:.2f} KB")
+            print(f"✓ Image generated and uploaded successfully!", flush=True)
+            print(f"  URL: {minio_url}", flush=True)
+            print(f"  Size: {image_size / 1024:.2f} KB", flush=True)
 
-        return filename
+            return minio_url
 
-    def _generate_with_gemini(self, prompt, output_dir):
-        """使用 Gemini Imagen 4.0 生成圖片"""
-        if not self.genai_imagen_client:
-            print("✗ Gemini Imagen client not initialized")
+        except Exception as e:
+            print(f"✗ Failed to upload to MinIO: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             return None
 
-        print(f"Generating image with Gemini Imagen 4.0...")
-        print(f"Prompt: {prompt}")
+    def _generate_with_gemini(self, prompt):
+        """使用 Gemini Imagen 4.0 生成圖片並上傳到 MinIO"""
+        if not self.genai_imagen_client:
+            print("✗ Gemini Imagen client not initialized", flush=True)
+            return None
+
+        if not self.minio_client:
+            print("✗ MinIO client not initialized", flush=True)
+            return None
+
+        print(f"Generating image with Gemini Imagen 4.0...", flush=True)
+        print(f"Prompt: {prompt}", flush=True)
 
         try:
             from google.genai import types
@@ -184,29 +226,47 @@ class GeminiService:
                 )
             )
 
-            # 儲存圖片
+            # 上傳到 MinIO
             for idx, generated_image in enumerate(response.generated_images):
                 timestamp = int(time.time())
                 filename = f"gift_image_{timestamp}_{idx}.png"
-                filepath = os.path.join(output_dir, filename)
 
-                # generated_image.image 是 PIL Image 物件
+                # generated_image.image 是 PIL Image 物件，轉為 BytesIO
                 pil_image = generated_image.image
-                pil_image.save(filepath)
+                image_buffer = BytesIO()
+                pil_image.save(image_buffer, format='PNG')
+                image_buffer.seek(0)
+                image_size = image_buffer.getbuffer().nbytes
 
-                # 獲取檔案大小
-                file_size = os.path.getsize(filepath) / 1024  # KB
+                # 上傳到 MinIO
+                try:
+                    self.minio_client.put_object(
+                        self.minio_bucket,
+                        filename,
+                        image_buffer,
+                        length=image_size,
+                        content_type='image/png'
+                    )
 
-                print(f"✓ Image generated successfully with Gemini!")
-                print(f"  File: {filepath}")
-                print(f"  Size: {file_size:.2f} KB")
+                    # 回傳完整 URL
+                    minio_url = f"{Config.MINIO_PUBLIC_URL}/{self.minio_bucket}/{filename}"
 
-                return filename
+                    print(f"✓ Image generated and uploaded successfully!", flush=True)
+                    print(f"  URL: {minio_url}", flush=True)
+                    print(f"  Size: {image_size / 1024:.2f} KB", flush=True)
+
+                    return minio_url
+
+                except Exception as e:
+                    print(f"✗ Failed to upload to MinIO: {e}", flush=True)
+                    import traceback
+                    traceback.print_exc()
+                    return None
 
             return None
 
         except ImportError as e:
-            print(f"✗ Failed to import Gemini types: {e}")
+            print(f"✗ Failed to import Gemini types: {e}", flush=True)
             return None
 
 
