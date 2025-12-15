@@ -10,6 +10,8 @@ function GalleryPage() {
   const [newGiftIds, setNewGiftIds] = useState(new Set());
   const pollingIntervalRef = useRef(null);
   const knownGiftIdsRef = useRef(new Set());
+  const animationFrameRef = useRef(null);
+  const ballsRef = useRef([]);
 
   useEffect(() => {
     loadGifts();
@@ -19,9 +21,21 @@ function GalleryPage() {
       checkForNewGifts();
     }, 3000);
 
+    // 啟動物理引擎
+    const animate = () => {
+      updateBallPositions();
+      detectCollisions();
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+    animate();
+
+    // 清理函數
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, []);
@@ -29,28 +43,37 @@ function GalleryPage() {
   const loadGifts = async () => {
     try {
       const response = await giftAPI.getAllGifts();
-      // 為每個禮物添加隨機位置和動畫參數
-      const giftsWithAnimation = response.data.gifts.map((gift, index) => ({
-        ...gift,
-        x: Math.random() * 80 + 10, // 10-90% 避免邊緣
-        y: Math.random() * 80 + 10,
-        size: Math.random() * 80 + 130, // 130-210px (增大)
-        duration: Math.random() * 8 + 6, // 6-14秒
-        delay: index * 0.3, // 錯開動畫
-        // 為每個泡泡生成隨機移動路徑
-        path: Array.from({length: 5}, () => ({
-          x: (Math.random() - 0.5) * 200,
-          y: (Math.random() - 0.5) * 200,
-          rotate: (Math.random() - 0.5) * 20
-        })),
-        isNew: false,
-      }));
-      setGifts(giftsWithAnimation);
+      const minSpeed = 0.3;
+      const maxSpeed = 0.8;
+
+      // 為每個禮物創建物理泡泡
+      const giftsWithPhysics = response.data.gifts.map((gift, index) => {
+        const ballRadius = 80 + Math.random() * 40; // 泡泡半徑 80-120
+        const minX = ballRadius;
+        const maxX = window.innerWidth - ballRadius;
+        const minY = ballRadius;
+        const maxY = window.innerHeight - ballRadius;
+
+        return {
+          ...gift,
+          x: Math.random() * (maxX - minX) + minX,
+          y: Math.random() * (maxY - minY) + minY,
+          speed: Math.random() * (maxSpeed - minSpeed) + minSpeed,
+          angle: Math.random() * 360,
+          acc: 0.005 * (Math.random() < 0.5 ? -1 : 1), // 加速度減小
+          canCollide: false, // 初始不能碰撞,直到不與其他球重疊
+          size: ballRadius * 2,
+          isNew: false,
+        };
+      });
+
+      setGifts(giftsWithPhysics);
+      ballsRef.current = giftsWithPhysics;
 
       // 記錄初始載入的禮物 ID
-      knownGiftIdsRef.current = new Set(giftsWithAnimation.map(g => g.id));
+      knownGiftIdsRef.current = new Set(giftsWithPhysics.map(g => g.id));
     } catch (err) {
-      setError('載入失敗，請稍後再試');
+      setError('載入失敗,請稍後再試');
     } finally {
       setLoading(false);
     }
@@ -59,40 +82,48 @@ function GalleryPage() {
   const checkForNewGifts = async () => {
     try {
       const response = await giftAPI.getAllGifts();
-      // 使用 ref 中記錄的已知禮物 ID
       const newGifts = response.data.gifts.filter(gift => !knownGiftIdsRef.current.has(gift.id));
 
       if (newGifts.length > 0) {
-        const newGiftsWithAnimation = newGifts.map((gift, index) => ({
-          ...gift,
-          x: Math.random() * 80 + 10,
-          y: Math.random() * 80 + 10,
-          size: Math.random() * 80 + 130,
-          duration: Math.random() * 8 + 6,
-          delay: 0,
-          path: Array.from({length: 5}, () => ({
-            x: (Math.random() - 0.5) * 200,
-            y: (Math.random() - 0.5) * 200,
-            rotate: (Math.random() - 0.5) * 20
-          })),
-          isNew: true,
-        }));
+        const minSpeed = 0.3;
+        const maxSpeed = 0.8;
 
-        setGifts(prev => [...prev, ...newGiftsWithAnimation]);
+        const newGiftsWithPhysics = newGifts.map((gift) => {
+          const ballRadius = 80 + Math.random() * 40; // 泡泡半徑 80-120
+          const minX = ballRadius;
+          const maxX = window.innerWidth - ballRadius;
+          const minY = ballRadius;
+          const maxY = window.innerHeight - ballRadius;
 
-        // 更新已知禮物 ID 集合
+          return {
+            ...gift,
+            x: Math.random() * (maxX - minX) + minX,
+            y: Math.random() * (maxY - minY) + minY,
+            speed: Math.random() * (maxSpeed - minSpeed) + minSpeed,
+            angle: Math.random() * 360,
+            acc: 0.005 * (Math.random() < 0.5 ? -1 : 1),
+            canCollide: false,
+            size: ballRadius * 2,
+            isNew: true,
+          };
+        });
+
+        const updatedGifts = [...ballsRef.current, ...newGiftsWithPhysics];
+        setGifts(updatedGifts);
+        ballsRef.current = updatedGifts;
+
         newGifts.forEach(gift => {
           knownGiftIdsRef.current.add(gift.id);
         });
 
-        // 標記新禮物ID
         const newIds = new Set(newGifts.map(g => g.id));
         setNewGiftIds(newIds);
 
-        // 3秒後移除新禮物標記
         setTimeout(() => {
           setNewGiftIds(new Set());
-          setGifts(prev => prev.map(g => ({ ...g, isNew: false })));
+          const updated = ballsRef.current.map(g => ({ ...g, isNew: false }));
+          setGifts(updated);
+          ballsRef.current = updated;
         }, 3000);
       }
     } catch (err) {
@@ -100,12 +131,124 @@ function GalleryPage() {
     }
   };
 
-  const handleStartExchange = () => {
-    navigate('/exchange');
+  const updateBallPositions = () => {
+    const minSpeed = 0.3;
+    const maxSpeed = 0.8;
+
+    const newBalls = ballsRef.current.map(ball => {
+      const updatedBall = { ...ball };
+      const ballRadius = updatedBall.size / 2; // 使用球的實際半徑
+
+      // 處理加速度和速度變化
+      if (updatedBall.acc) {
+        if (updatedBall.acc > 0 && updatedBall.speed >= maxSpeed) {
+          updatedBall.acc = updatedBall.acc * -1;
+        } else if (updatedBall.acc < 0 && updatedBall.speed <= 0.1) {
+          updatedBall.angle = Math.random() * 360;
+          updatedBall.acc = updatedBall.acc * -1;
+        }
+        updatedBall.speed = updatedBall.speed + updatedBall.acc;
+      }
+
+      // 檢查牆壁碰撞
+      if (
+        updatedBall.x - ballRadius - updatedBall.speed < 0 ||
+        updatedBall.x + ballRadius + updatedBall.speed > window.innerWidth
+      ) {
+        updatedBall.angle = 180 - updatedBall.angle;
+      }
+      if (
+        updatedBall.y - ballRadius - updatedBall.speed < 0 ||
+        updatedBall.y + ballRadius + updatedBall.speed > window.innerHeight
+      ) {
+        updatedBall.angle = 360 - updatedBall.angle;
+      }
+
+      // 修正角度範圍
+      updatedBall.angle = ((updatedBall.angle % 360) + 360) % 360;
+
+      // 更新位置
+      updatedBall.x = updatedBall.x + updatedBall.speed * Math.cos((updatedBall.angle * Math.PI) / 180);
+      updatedBall.y = updatedBall.y + updatedBall.speed * Math.sin((updatedBall.angle * Math.PI) / 180);
+
+      // 檢查是否可以開始碰撞
+      if (!updatedBall.canCollide) {
+        updatedBall.canCollide = enableCollision(updatedBall, ballsRef.current);
+      }
+
+      return updatedBall;
+    });
+
+    ballsRef.current = newBalls;
+    setGifts(newBalls);
   };
 
-  const handleAddNewGift = () => {
-    navigate('/');
+  const enableCollision = (ball, allBalls) => {
+    return !allBalls.find((otherBall) => {
+      if (ball.id === otherBall.id) return false;
+
+      const ballDist = Math.sqrt(
+        Math.pow(ball.x - otherBall.x, 2) + Math.pow(ball.y - otherBall.y, 2)
+      );
+
+      const ballRadius = ball.size / 2;
+      const otherBallRadius = otherBall.size / 2;
+
+      return ballDist <= ballRadius + otherBallRadius;
+    });
+  };
+
+  const detectCollisions = () => {
+    const newBalls = [...ballsRef.current];
+
+    for (let i = 0; i < newBalls.length; i++) {
+      const ball = newBalls[i];
+      if (!ball.canCollide) continue;
+      const ballRadius = ball.size / 2;
+
+      for (let j = i + 1; j < newBalls.length; j++) {
+        const otherBall = newBalls[j];
+        if (!otherBall.canCollide) continue;
+        const otherBallRadius = otherBall.size / 2;
+
+        const ballDist = Math.sqrt(
+          Math.pow(ball.x - otherBall.x, 2) + Math.pow(ball.y - otherBall.y, 2)
+        );
+
+        if (ballDist <= ballRadius + otherBallRadius) {
+          // 碰撞!計算新的速度和角度
+          const ballAngleRad = (ball.angle * Math.PI) / 180;
+          const otherBallAngleRad = (otherBall.angle * Math.PI) / 180;
+          const hitAngle = Math.atan2(ball.y - otherBall.y, ball.x - otherBall.x);
+
+          const ballXspeed =
+            otherBall.speed * Math.cos(otherBallAngleRad - hitAngle) * Math.cos(hitAngle) +
+            ball.speed * Math.sin(ballAngleRad - hitAngle) * Math.sin(hitAngle);
+          const ballYspeed =
+            otherBall.speed * Math.cos(otherBallAngleRad - hitAngle) * Math.sin(hitAngle) +
+            ball.speed * Math.sin(ballAngleRad - hitAngle) * Math.cos(hitAngle);
+
+          const otherBallXspeed =
+            ball.speed * Math.cos(ballAngleRad - hitAngle) * Math.cos(hitAngle) +
+            otherBall.speed * Math.sin(otherBallAngleRad - hitAngle) * Math.sin(hitAngle);
+          const otherBallYspeed =
+            ball.speed * Math.cos(ballAngleRad - hitAngle) * Math.sin(hitAngle) +
+            otherBall.speed * Math.sin(otherBallAngleRad - hitAngle) * Math.cos(hitAngle);
+
+          const ballAngle = (Math.atan2(ballYspeed, ballXspeed) * 180) / Math.PI;
+          const otherBallAngle = (Math.atan2(otherBallYspeed, otherBallXspeed) * 180) / Math.PI;
+
+          const ballSpeed = Math.sqrt(Math.pow(ballXspeed, 2) + Math.pow(ballYspeed, 2));
+          const otherBallSpeed = Math.sqrt(Math.pow(otherBallXspeed, 2) + Math.pow(otherBallYspeed, 2));
+
+          newBalls[i] = { ...ball, angle: ballAngle, speed: ballSpeed, canCollide: false };
+          newBalls[j] = { ...otherBall, angle: otherBallAngle, speed: otherBallSpeed, canCollide: false };
+        }
+      }
+    }
+
+    ballsRef.current = newBalls;
+    setGifts(newBalls);
   };
 
   if (loading) {
@@ -151,56 +294,52 @@ function GalleryPage() {
       ) : (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
           {gifts.map((gift) => {
-            const animationName = `float-${gift.id}`;
             return (
               <div
                 key={gift.id}
-                className={`floating-bubble ${gift.isNew ? 'new-gift' : ''}`}
+                className={`bubble-ball ${gift.isNew ? 'new-gift' : ''}`}
                 style={{
                   position: 'absolute',
-                  left: `${gift.x}%`,
-                  top: `${gift.y}%`,
-                  animation: gift.isNew
-                    ? `popIn 0.5s ease-out, ${animationName} ${gift.duration}s ease-in-out infinite 0.5s`
-                    : `${animationName} ${gift.duration}s ease-in-out infinite`,
-                  animationDelay: gift.isNew ? '0s' : `${gift.delay}s`,
+                  left: `${gift.x - gift.size / 2}px`,
+                  top: `${gift.y - gift.size / 2}px`,
+                  width: `${gift.size}px`,
+                  height: `${gift.size}px`,
                   cursor: 'pointer',
-                  transition: 'transform 0.3s ease',
+                  transition: 'filter 0.3s ease',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '10px',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <img
-                  src={getFullImageUrl(gift.image_url)}
-                  alt="禮物"
+                <div
                   style={{
-                    width: `${gift.size}px`,
-                    height: `${gift.size}px`,
-                    objectFit: 'cover',
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
                     borderRadius: '50%',
+                    background: `url(${getFullImageUrl(gift.image_url)}) no-repeat center center`,
+                    backgroundSize: 'cover',
                     boxShadow: gift.isNew
-                      ? '0 0 40px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 255, 255, 0.8)'
-                      : '0 8px 30px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.3)',
-                    border: gift.is_exchanged ? '5px solid #FFD700' : '5px solid rgba(255, 255, 255, 0.9)',
+                      ? '0 0 40px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 255, 255, 0.8), inset 0 0 60px rgba(255, 255, 255, 0.3)'
+                      : '0 8px 30px rgba(0, 0, 0, 0.3), inset 0 0 40px rgba(255, 255, 255, 0.2)',
+                    border: gift.is_exchanged ? '4px solid #FFD700' : '4px solid rgba(255, 255, 255, 0.5)',
+                    animation: gift.isNew ? 'popIn 0.5s ease-out' : 'none',
                   }}
-                />
-                <div style={{
-                  maxWidth: `${gift.size}px`,
-                  padding: '8px 12px',
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  fontSize: '14px',
-                  color: '#333',
-                  textAlign: 'center',
-                  lineHeight: '1.4',
-                  fontWeight: '500',
-                }}>
-                  {gift.happiness_reason}
+                >
+                  {/* 泡泡光澤效果 */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '15%',
+                    left: '20%',
+                    width: '40%',
+                    height: '40%',
+                    background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), transparent 50%)',
+                    borderRadius: '50%',
+                    pointerEvents: 'none',
+                  }} />
+
+
                 </div>
               </div>
             );
@@ -209,42 +348,21 @@ function GalleryPage() {
       )}
 
       <style>{`
-        ${gifts.map(gift => `
-          @keyframes float-${gift.id} {
-            0%, 100% {
-              transform: translate(0, 0) rotate(0deg);
-            }
-            20% {
-              transform: translate(${gift.path[0].x}px, ${gift.path[0].y}px) rotate(${gift.path[0].rotate}deg);
-            }
-            40% {
-              transform: translate(${gift.path[1].x}px, ${gift.path[1].y}px) rotate(${gift.path[1].rotate}deg);
-            }
-            60% {
-              transform: translate(${gift.path[2].x}px, ${gift.path[2].y}px) rotate(${gift.path[2].rotate}deg);
-            }
-            80% {
-              transform: translate(${gift.path[3].x}px, ${gift.path[3].y}px) rotate(${gift.path[3].rotate}deg);
-            }
-          }
-        `).join('')}
-
         @keyframes popIn {
           0% {
-            transform: scale(0) rotate(0deg);
+            transform: scale(0);
             opacity: 0;
           }
           50% {
-            transform: scale(1.3) rotate(180deg);
+            transform: scale(1.2);
           }
           100% {
-            transform: scale(1) rotate(360deg);
+            transform: scale(1);
             opacity: 1;
           }
         }
 
-        .floating-bubble:hover {
-          z-index: 10;
+        .bubble-ball:hover {
           filter: brightness(1.2) drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
         }
 

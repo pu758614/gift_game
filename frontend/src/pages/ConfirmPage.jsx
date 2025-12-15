@@ -72,9 +72,11 @@ function ConfirmPage() {
         </div>
 
         <div className="gift-info">
-          <p><strong>玩家：</strong>{gift.player_name}</p>
-          <p><strong>適合對象：</strong>{gift.who_likes}</p>
-          <p><strong>使用情境：</strong>{gift.usage_situation}</p>
+          <p><strong>{gift.player_name}的禮物</strong></p>
+          <p><strong>外型或材質：</strong>{gift.appearance}</p>
+          <p><strong>什麼人會喜歡：</strong>{gift.who_likes}</p>
+          <p><strong>什麼時候使用：</strong>{gift.usage_time}</p>
+          <p><strong>幸福感：</strong>{gift.happiness_reason}</p>
         </div>
 
         <div className="button-group">

@@ -27,7 +27,6 @@ class GeminiService:
 
         # OpenAI 客戶端
         openai_key = Config.OPENAI_API_KEY
-        print(f"OpenAI API Key configured: {bool(openai_key)}", flush=True)
         if openai_key:
             os.environ['OPENAI_API_KEY'] = openai_key
             self.openai_client = OpenAI()
@@ -144,31 +143,35 @@ class GeminiService:
             print("✗ MinIO client not initialized", flush=True)
             return None
 
-        print(f"Generating image with DALL-E...", flush=True)
+        print(f"Generating image with gpt-image-1-mini...", flush=True)
         print(f"Prompt: {prompt}", flush=True)
 
-        # 使用 DALL-E 2 生成圖片
+        # 使用 gpt-image-1-mini 生成圖片 (預設回傳 base64)
         response = self.openai_client.images.generate(
-            model="dall-e-2",
+            model="gpt-image-1-mini",
             prompt=prompt,
             size="1024x1024",
-            n=1,
+            n=1
         )
 
-        # 獲取圖片 URL
-        image_url = response.data[0].url
-        print(f"Image URL: {image_url}", flush=True)
-
-        # 下載圖片到記憶體
-        image_response = requests.get(image_url)
-        if image_response.status_code != 200:
-            print(
-                f"✗ Failed to download image: {image_response.status_code}", flush=True)
+        # 檢查 MINIO_PUBLIC_URL
+        if not Config.MINIO_PUBLIC_URL:
+            print("✗ MINIO_PUBLIC_URL is not configured", flush=True)
             return None
 
-        # 準備上傳到 MinIO
-        image_data = BytesIO(image_response.content)
-        image_size = len(image_response.content)
+        # 獲取 base64 圖片數據 (gpt-image-1-mini 預設回傳格式)
+        import base64
+        b64_data = response.data[0].b64_json
+        if not b64_data:
+            print("✗ No image data returned", flush=True)
+            return None
+
+        print(f"✓ Image generated, decoding base64...", flush=True)
+
+        # 解碼 base64 到記憶體
+        image_bytes = base64.b64decode(b64_data)
+        image_data = BytesIO(image_bytes)
+        image_size = len(image_bytes)
 
         timestamp = int(time.time())
         filename = f"gift_image_{timestamp}_0.png"
@@ -207,9 +210,6 @@ class GeminiService:
         if not self.minio_client:
             print("✗ MinIO client not initialized", flush=True)
             return None
-
-        print(f"Generating image with Gemini Imagen 4.0...", flush=True)
-        print(f"Prompt: {prompt}", flush=True)
 
         try:
             from google.genai import types
