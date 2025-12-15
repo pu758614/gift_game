@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: giftgame_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-giftgame}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-giftgame123}
+      POSTGRES_DB: ${POSTGRES_DB:-giftgame_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - giftgame_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-giftgame} -d ${POSTGRES_DB:-giftgame_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: giftgame_backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-giftgame}:${POSTGRES_PASSWORD:-giftgame123}@db:5432/${POSTGRES_DB:-giftgame_db}
+      FLASK_APP: app.py
+      FLASK_ENV: development
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-dev_secret_key}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      IMAGE_GENERATION_ENGINE: ${IMAGE_GENERATION_ENGINE:-openai}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - giftgame_network
+    command: python app.py
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: giftgame_frontend
+    environment:
+      VITE_API_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - giftgame_network
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
+
+networks:
+  giftgame_network:
+    driver: bridge
