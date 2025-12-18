@@ -10,6 +10,7 @@ function FormPage() {
 
   const [formData, setFormData] = useState({
     player_name: '',
+    gift_name: '',
     appearance: '',
     who_likes: '',
     usage_time: '',
@@ -86,7 +87,7 @@ function FormPage() {
             marginBottom: '10px',
             textAlign: 'center'
           }}>
-            GPT 正在努力畫畫中
+            AI 正在努力畫畫中
           </h2>
           <div style={{
             color: 'white',
@@ -151,7 +152,20 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="appearance">2. 你這個禮物的外型或材質是什麼？*</label>
+            <label htmlFor="gift_name">2. 這個禮物是什麼？*</label>
+            <input
+              type="text"
+              id="gift_name"
+              name="gift_name"
+              value={formData.gift_name}
+              onChange={handleChange}
+              required
+              placeholder="例如：保溫杯、藍牙耳機、香氛蠟燭..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="appearance">3. 讓AI猜猜~~你這個禮物的外型或材質是什麼？*</label>
             <textarea
               id="appearance"
               name="appearance"
@@ -163,7 +177,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="who_likes">3. 你這個禮物通常是什麼人會喜歡的？*</label>
+            <label htmlFor="who_likes">4. 讓AI猜猜~~你這個禮物通常是什麼人會喜歡的？*</label>
             <textarea
               id="who_likes"
               name="who_likes"
@@ -175,7 +189,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="usage_time">4. 你這個禮物通常是在什麼時候使用？*</label>
+            <label htmlFor="usage_time">5. 讓AI猜猜~~你這個禮物通常是在什麼時候使用？*</label>
             <textarea
               id="usage_time"
               name="usage_time"
@@ -187,14 +201,14 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="happiness_reason">5. 收到的人會有什麼幸福感？*</label>
+            <label htmlFor="happiness_reason">6. 收到的人會因為這禮物而發出什麼讚嘆？*</label>
             <textarea
               id="happiness_reason"
               name="happiness_reason"
               value={formData.happiness_reason}
               onChange={handleChange}
               required
-              placeholder="例如：感受到溫暖與關懷、能讓生活更便利、帶來放鬆與愉悅..."
+              placeholder="例如：哇！好實用！、太貼心了！、這正是我需要的！..."
             />
           </div>
 

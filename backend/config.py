@@ -33,7 +33,8 @@ class Config:
     MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
     MINIO_BUCKET = os.getenv('MINIO_BUCKET', 'gift-images')
     MINIO_USE_SSL = os.getenv('MINIO_USE_SSL', 'false').lower() == 'true'
-    MINIO_PUBLIC_URL = os.getenv('MINIO_PUBLIC_URL', 'http://localhost:9000')
+    MINIO_PUBLIC_URL = os.getenv(
+        'MINIO_PUBLIC_URL', 'http://192.168.1.103:9000')
 
     # 上傳檔案設定 (保留以向後相容)
     UPLOAD_FOLDER = 'uploads'

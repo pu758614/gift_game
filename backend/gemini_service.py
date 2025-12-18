@@ -186,14 +186,16 @@ class GeminiService:
                 content_type='image/png'
             )
 
-            # 回傳完整 URL
-            minio_url = f"{Config.MINIO_PUBLIC_URL}/{self.minio_bucket}/{filename}"
+            # 回傳相對路徑 (不含 base URL)
+            relative_path = f"/{self.minio_bucket}/{filename}"
+            full_url = f"{Config.MINIO_PUBLIC_URL}{relative_path}"
 
             print(f"✓ Image generated and uploaded successfully!", flush=True)
-            print(f"  URL: {minio_url}", flush=True)
+            print(f"  Full URL: {full_url}", flush=True)
+            print(f"  Relative path: {relative_path}", flush=True)
             print(f"  Size: {image_size / 1024:.2f} KB", flush=True)
 
-            return minio_url
+            return relative_path
 
         except Exception as e:
             print(f"✗ Failed to upload to MinIO: {e}", flush=True)
@@ -248,14 +250,16 @@ class GeminiService:
                         content_type='image/png'
                     )
 
-                    # 回傳完整 URL
-                    minio_url = f"{Config.MINIO_PUBLIC_URL}/{self.minio_bucket}/{filename}"
+                    # 回傳相對路徑 (不含 base URL)
+                    relative_path = f"/{self.minio_bucket}/{filename}"
+                    full_url = f"{Config.MINIO_PUBLIC_URL}{relative_path}"
 
                     print(f"✓ Image generated and uploaded successfully!", flush=True)
-                    print(f"  URL: {minio_url}", flush=True)
+                    print(f"  Full URL: {full_url}", flush=True)
+                    print(f"  Relative path: {relative_path}", flush=True)
                     print(f"  Size: {image_size / 1024:.2f} KB", flush=True)
 
-                    return minio_url
+                    return relative_path
 
                 except Exception as e:
                     print(f"✗ Failed to upload to MinIO: {e}", flush=True)

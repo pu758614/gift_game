@@ -93,7 +93,7 @@ function SuccessPage() {
             </div>
 
             <div className="detail-item">
-              <label>💝 帶來的幸福感：</label>
+              <label>💝 發出的讚嘆：</label>
               <p>{gift.happiness_reason}</p>
             </div>
           </div>

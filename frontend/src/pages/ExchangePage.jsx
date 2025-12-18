@@ -164,7 +164,7 @@ function ExchangePage() {
                 {selectedGift.usage_time}
               </p>
               <p style={{ marginBottom: '0', color: '#333' }}>
-                <strong style={{ color: '#667eea' }}>收到的人會有什麼幸福感？</strong><br />
+                <strong style={{ color: '#667eea' }}>收到的人會因為這禮物而發出什麼讚嘆？</strong><br />
                 {selectedGift.happiness_reason}
               </p>
             </div>

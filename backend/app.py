@@ -32,7 +32,7 @@ def submit_form():
         print(f"接收到的數據: {data}")
 
         # 驗證必填欄位
-        required_fields = ['player_name', 'appearance', 'who_likes',
+        required_fields = ['player_name', 'gift_name', 'appearance', 'who_likes',
                            'usage_time', 'happiness_reason']
         for field in required_fields:
             if not data.get(field):
@@ -43,6 +43,7 @@ def submit_form():
         # 創建新的禮物記錄
         gift = Gift(
             player_name=data['player_name'],
+            gift_name=data['gift_name'],
             appearance=data['appearance'],
             who_likes=data['who_likes'],
             usage_time=data['usage_time'],

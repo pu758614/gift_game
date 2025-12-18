@@ -12,6 +12,7 @@ class Gift(db.Model):
     player_name = db.Column(db.String(100), nullable=False)
 
     # 表單問題答案
+    gift_name = db.Column(db.String(200), nullable=False)  # 禮物名稱
     appearance = db.Column(db.Text, nullable=False)  # 外型或材質
     who_likes = db.Column(db.Text, nullable=False)  # 什麼人會喜歡
     usage_time = db.Column(db.Text, nullable=False)  # 什麼時候使用
@@ -36,6 +37,7 @@ class Gift(db.Model):
         data = {
             'id': self.id,
             'player_name': self.player_name,
+            'gift_name': self.gift_name,
             'appearance': self.appearance,
             'who_likes': self.who_likes,
             'usage_time': self.usage_time,

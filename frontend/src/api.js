@@ -20,8 +20,9 @@ const api = axios.create({
 export const getFullImageUrl = (imageUrl) => {
   if (!imageUrl) return null;
   if (imageUrl.startsWith('http')) return imageUrl;
-  // 如果是相對路徑，添加API URL前綴
-  return `${API_URL}${imageUrl}`;
+  // 如果是相對路徑 (例如 /gift-images/xxx.png)，使用當前主機名加上 MinIO 端口
+  const hostname = window.location.hostname;
+  return `http://${hostname}:9000${imageUrl}`;
 };
 
 export const giftAPI = {
