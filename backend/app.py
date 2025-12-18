@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_migrate import Migrate
 from config import Config
 from models import db, Gift
 from gemini_service import gemini_service
@@ -11,10 +12,11 @@ app.config.from_object(Config)
 # 初始化擴展
 CORS(app, origins=Config.CORS_ORIGINS)
 db.init_app(app)
+migrate = Migrate(app, db)
 
-# 創建資料表
-with app.app_context():
-    db.create_all()
+# 創建資料表 (僅在沒有使用遷移時)
+# with app.app_context():
+#     db.create_all()
 
 
 @app.route('/api/health', methods=['GET'])
