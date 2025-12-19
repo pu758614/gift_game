@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_migrate import Migrate
 from config import Config
-from models import db, Gift
+from models import db, Gift, Vote
 from gemini_service import gemini_service
 import os
 
@@ -236,7 +236,8 @@ def exchange_gift():
 def reset_game():
     """重置遊戲（開發用）"""
     try:
-        # 刪除所有禮物
+        # 刪除所有禮物和投票
+        Vote.query.delete()
         Gift.query.delete()
         db.session.commit()
 
@@ -244,6 +245,136 @@ def reset_game():
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/voting/submit', methods=['POST'])
+def submit_vote():
+    """提交投票"""
+    try:
+        data = request.get_json()
+        gift_id = data.get('gift_id')
+        award_type = data.get('award_type')  # 'creative' 或 'blessing'
+        voter_fingerprint = data.get('voter_fingerprint')
+
+        # 驗證參數
+        if not all([gift_id, award_type, voter_fingerprint]):
+            return jsonify({'error': '缺少必要參數'}), 400
+
+        if award_type not in ['creative', 'blessing']:
+            return jsonify({'error': '無效的獎項類型'}), 400
+
+        # 檢查禮物是否存在
+        gift = Gift.query.get(gift_id)
+        if not gift:
+            return jsonify({'error': '禮物不存在'}), 404
+
+        # 檢查該投票者對此獎項已投了幾票
+        votes_count = Vote.query.filter_by(
+            voter_fingerprint=voter_fingerprint,
+            award_type=award_type
+        ).count()
+
+        if votes_count >= 3:
+            return jsonify({'error': f'您已用完此獎項的3票'}), 400
+
+        # 檢查是否已對此禮物投過此獎項
+        existing_vote = Vote.query.filter_by(
+            voter_fingerprint=voter_fingerprint,
+            gift_id=gift_id,
+            award_type=award_type
+        ).first()
+
+        if existing_vote:
+            return jsonify({'error': '您已對此禮物投過此獎項'}), 400
+
+        # 創建投票記錄
+        vote = Vote(
+            gift_id=gift_id,
+            award_type=award_type,
+            voter_fingerprint=voter_fingerprint,
+            voter_ip=request.remote_addr
+        )
+
+        db.session.add(vote)
+        db.session.commit()
+
+        # 返回當前投票狀態
+        remaining_votes = 3 - (votes_count + 1)
+        return jsonify({
+            'message': '投票成功',
+            'remaining_votes': remaining_votes
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/voting/status', methods=['POST'])
+def get_voting_status():
+    """獲取當前投票者的投票狀態"""
+    try:
+        data = request.get_json()
+        voter_fingerprint = data.get('voter_fingerprint')
+
+        if not voter_fingerprint:
+            return jsonify({'error': '缺少投票者指紋'}), 400
+
+        # 獲取該投票者的所有投票
+        votes = Vote.query.filter_by(voter_fingerprint=voter_fingerprint).all()
+
+        # 統計各獎項已投票數和已投票的禮物ID
+        creative_votes = [
+            v.gift_id for v in votes if v.award_type == 'creative']
+        blessing_votes = [
+            v.gift_id for v in votes if v.award_type == 'blessing']
+
+        return jsonify({
+            'creative': {
+                'voted_gift_ids': creative_votes,
+                'remaining_votes': 3 - len(creative_votes)
+            },
+            'blessing': {
+                'voted_gift_ids': blessing_votes,
+                'remaining_votes': 3 - len(blessing_votes)
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/voting/results', methods=['GET'])
+def get_voting_results():
+    """獲取投票結果"""
+    try:
+        # 獲取所有禮物及其票數
+        gifts = Gift.query.filter_by(is_confirmed=True).all()
+
+        results = []
+        for gift in gifts:
+            creative_count = Vote.query.filter_by(
+                gift_id=gift.id,
+                award_type='creative'
+            ).count()
+
+            blessing_count = Vote.query.filter_by(
+                gift_id=gift.id,
+                award_type='blessing'
+            ).count()
+
+            gift_data = gift.to_dict(include_happiness=False)
+            gift_data['creative_votes'] = creative_count
+            gift_data['blessing_votes'] = blessing_count
+            results.append(gift_data)
+
+        return jsonify({
+            'gifts': results,
+            'total': len(results)
+        }), 200
+
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 

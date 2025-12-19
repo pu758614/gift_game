@@ -1,16 +1,9 @@
 import axios from 'axios';
 
-// 動態決定 API URL
-// 總是使用當前訪問的主機名加上 5000 端口，這樣在手機和電腦上都能正常工作
-const getApiUrl = () => {
-  const hostname = window.location.hostname;
-  return `http://${hostname}:5000`;
-};
-
-const API_URL = getApiUrl();
-
+// 使用相對路徑，利用 Vite 的 proxy 配置
+// 這樣在開發環境會通過 proxy 轉發到後端
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,6 +43,19 @@ export const giftAPI = {
 
   // 重置遊戲
   resetGame: () => api.post('/api/reset'),
+
+  // 投票相關
+  submitVote: (giftId, awardType, voterFingerprint) =>
+    api.post('/api/voting/submit', {
+      gift_id: giftId,
+      award_type: awardType,
+      voter_fingerprint: voterFingerprint,
+    }),
+
+  getVotingStatus: (voterFingerprint) =>
+    api.post('/api/voting/status', { voter_fingerprint: voterFingerprint }),
+
+  getVotingResults: () => api.get('/api/voting/results'),
 };
 
 export default api;

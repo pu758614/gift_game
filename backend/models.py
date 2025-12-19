@@ -54,3 +54,31 @@ class Gift(db.Model):
             data['happiness_reason'] = self.happiness_reason
 
         return data
+
+
+class Vote(db.Model):
+    """投票資料模型"""
+    __tablename__ = 'votes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    gift_id = db.Column(db.Integer, db.ForeignKey('gifts.id'), nullable=False)
+    # 'creative' 或 'blessing'
+    award_type = db.Column(db.String(50), nullable=False)
+    voter_fingerprint = db.Column(db.String(255), nullable=False)  # 投票者指紋
+    voter_ip = db.Column(db.String(50))  # IP 地址
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # 建立索引以提高查詢效率
+    __table_args__ = (
+        db.Index('idx_voter_fingerprint', 'voter_fingerprint'),
+        db.Index('idx_gift_award', 'gift_id', 'award_type'),
+    )
+
+    def to_dict(self):
+        """轉換為字典格式"""
+        return {
+            'id': self.id,
+            'gift_id': self.gift_id,
+            'award_type': self.award_type,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
