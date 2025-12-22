@@ -75,14 +75,39 @@ export const generateFingerprint = async () => {
 
 /**
  * 使用 SubtleCrypto API 生成 SHA-256 hash
+ * 如果不支援，則使用簡單的 hash 函數
  */
 const hashString = async (str) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+  // 檢查是否支援 crypto.subtle
+  if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    } catch (e) {
+      console.warn('crypto.subtle.digest failed, using fallback hash:', e);
+    }
+  }
+
+  // Fallback: 使用簡單的 hash 函數
+  return simpleHash(str);
+};
+
+/**
+ * 簡單的 hash 函數（當 crypto.subtle 不可用時）
+ */
+const simpleHash = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // 轉換為正數的十六進位字串
+  return Math.abs(hash).toString(16).padStart(8, '0') + Date.now().toString(16);
 };
 
 /**

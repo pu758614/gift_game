@@ -91,20 +91,26 @@ function ExchangePage() {
           </p>
         ) : (
           <div className="gifts-grid">
-            {gifts.map((gift) => (
-              <div
-                key={gift.id}
-                className="gift-card"
-                onClick={() => handleSelectGift(gift)}
-                style={{ cursor: 'pointer' }}
-              >
-                <img
-                  src={getFullImageUrl(gift.image_url)}
-                  alt="禮物"
-                  className="gift-image"
-                />
-                <div className="gift-info">
-                  <p style={{ fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }}>
+            {availableGifts.map((gift) => (
+              <div key={gift.id} className="gift-item">
+                <div
+                  className="gift-card"
+                  onClick={() => handleSelectGift(gift)}
+                  style={{
+                    cursor: 'pointer',
+                    border: '1px solid #e0e0e0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  <img
+                    src={getFullImageUrl(gift.image_url)}
+                    alt="禮物"
+                    className="gift-image"
+                  />
+                </div>
+                <div className="gift-description">
+                  <div className="gift-description-icon">💬</div>
+                  <p className="gift-description-text">
                     {gift.happiness_reason}
                   </p>
                 </div>
@@ -148,7 +154,7 @@ function ExchangePage() {
 
             <div style={{ marginBottom: '16px', textAlign: 'left', background: '#f8f9fa', padding: '16px', borderRadius: '8px', color: '#333' }}>
               <p style={{ marginBottom: '12px', color: '#333' }}>
-                <strong style={{ color: '#667eea' }}>你的名子？</strong><br />
+                <strong style={{ color: '#667eea' }}>你的名字？</strong><br />
                 {selectedGift.player_name}
               </p>
               <p style={{ marginBottom: '12px', color: '#333' }}>

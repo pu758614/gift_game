@@ -89,33 +89,28 @@ class GeminiService:
             return "神秘禮物"
 
     def generate_gift_image_prompt(self, gift_name, appearance, who_likes):
-        """生成圖片描述提示詞"""
-        if not self.model:
-            return f"A beautifully wrapped gift box with {gift_name}"
+        """使用固定模板生成圖片描述提示詞"""
+        # 如果是中文禮物名稱，用 AI 快速翻譯成英文
+        if self.model and any('\u4e00' <= char <= '\u9fff' for char in gift_name):
+            try:
+                translate_response = self.model.generate_content(
+                    f"請將「{gift_name}」翻譯成英文，只回答英文單詞或短語，不要其他內容。"
+                )
+                gift_name_en = translate_response.text.strip().strip('"\'')
+                print(
+                    f"Translated gift name: {gift_name} -> {gift_name_en}", flush=True)
+            except Exception as e:
+                print(f"Translation failed, using original: {e}", flush=True)
+                gift_name_en = gift_name
+        else:
+            gift_name_en = gift_name
 
-        prompt = f"""
-        請為「{gift_name}」這個禮物生成一個適合用於 AI 圖片生成的英文提示詞。
+        # 固定模板：包含溫馨節慶氛圍和精美包裝
+        prompt = f"A beautiful {gift_name_en}, elegantly wrapped with festive ribbon and gift paper, warm cozy lighting, holiday atmosphere, product photography, high quality, professional"
 
-        參考資訊：
-        - 外型或材質：{appearance}
-        - 適合對象：{who_likes}
-
-        請生成一個詳細的英文圖片描述，包含：
-        1. 禮物本身的外觀和材質
-        2. 溫馨、節慶的氛圍
-        3. 精美的包裝或呈現方式
-
-        只需要回答英文提示詞，不需要其他解釋。格式範例：
-        "A beautiful coffee mug with festive design, wrapped in elegant gift paper with a red ribbon, warm lighting, cozy atmosphere"
-        """
-
-        try:
-            response = self.model.generate_content(prompt)
-            prompt_text = response.text.strip()
-            return prompt_text
-        except Exception as e:
-            print(f"生成圖片提示詞錯誤: {str(e)}")
-            return f"A beautiful {gift_name} with festive wrapping and warm lighting"
+        print(
+            f"Using fixed template for image generation: {prompt}", flush=True)
+        return prompt
 
     def generate_gift_image(self, prompt, output_dir=None):
         """使用選定的引擎生成圖片並上傳到 MinIO"""
