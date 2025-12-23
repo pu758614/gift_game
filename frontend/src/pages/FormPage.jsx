@@ -222,9 +222,19 @@ function FormPage() {
               placeholder="例如：保溫杯、藍牙耳機、香氛蠟燭..."
             />
           </div>
-
           <div className="form-group">
-            <label htmlFor="appearance">3. 讓AI猜猜~~你這個禮物的外型或材質是什麼？*</label>
+            <label htmlFor="happiness_reason">3. 收到的人會因為這禮物而發出什麼讚嘆？*</label>
+            <textarea
+              id="happiness_reason"
+              name="happiness_reason"
+              value={formData.happiness_reason}
+              onChange={handleChange}
+              required
+              placeholder="例如：哇！好實用！、太貼心了！、這正是我需要的！..."
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="appearance">4. 你這個禮物的外型或材質是什麼？*</label>
             <textarea
               id="appearance"
               name="appearance"
@@ -236,7 +246,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="who_likes">4. 讓AI猜猜~~你這個禮物通常是什麼人會喜歡的？*</label>
+            <label htmlFor="who_likes">5. 你這個禮物通常是什麼人會喜歡的？*</label>
             <textarea
               id="who_likes"
               name="who_likes"
@@ -248,7 +258,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="usage_time">5. 讓AI猜猜~~你這個禮物通常是在什麼時候使用？*</label>
+            <label htmlFor="usage_time">6. 你這個禮物通常是在什麼時候使用？*</label>
             <textarea
               id="usage_time"
               name="usage_time"
@@ -259,17 +269,7 @@ function FormPage() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="happiness_reason">6. 收到的人會因為這禮物而發出什麼讚嘆？*</label>
-            <textarea
-              id="happiness_reason"
-              name="happiness_reason"
-              value={formData.happiness_reason}
-              onChange={handleChange}
-              required
-              placeholder="例如：哇！好實用！、太貼心了！、這正是我需要的！..."
-            />
-          </div>
+
 
           <div className="button-group">
             <button type="submit" className="btn btn-primary" disabled={loading}>
