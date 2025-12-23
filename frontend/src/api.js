@@ -37,6 +37,9 @@ export const giftAPI = {
   // 取得單一禮物詳情
   getGiftDetail: (giftId) => api.get(`/api/gift/${giftId}`),
 
+  // 查詢圖片生成狀態
+  getGenerationStatus: (giftId) => api.get(`/api/gift/${giftId}/generation-status`),
+
   // 交換禮物
   exchangeGift: (giftId, exchangerName) =>
     api.post('/api/exchange', { gift_id: giftId, exchanger_name: exchangerName }),

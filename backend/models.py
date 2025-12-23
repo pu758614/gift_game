@@ -22,6 +22,14 @@ class Gift(db.Model):
     ai_guess = db.Column(db.String(200))  # AI 猜測的禮物
     image_url = db.Column(db.String(500))  # 生成的圖片 URL
 
+    # 圖片生成狀態追蹤
+    # pending/processing/completed/failed
+    image_generation_status = db.Column(db.String(20), default='pending')
+    image_generation_started_at = db.Column(db.DateTime)  # 開始生成時間
+    image_generation_completed_at = db.Column(db.DateTime)  # 完成生成時間
+    image_generation_error = db.Column(db.Text)  # 錯誤訊息
+    image_generation_retry_count = db.Column(db.Integer, default=0)  # 重試次數
+
     # 狀態
     is_confirmed = db.Column(db.Boolean, default=False)  # 是否確認圖片
     is_exchanged = db.Column(db.Boolean, default=False)  # 是否已被交換
@@ -47,6 +55,11 @@ class Gift(db.Model):
             'is_exchanged': self.is_exchanged,
             'exchanged_with': self.exchanged_with,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'image_generation_status': self.image_generation_status,
+            'image_generation_started_at': self.image_generation_started_at.isoformat() if self.image_generation_started_at else None,
+            'image_generation_completed_at': self.image_generation_completed_at.isoformat() if self.image_generation_completed_at else None,
+            'image_generation_error': self.image_generation_error,
+            'image_generation_retry_count': self.image_generation_retry_count,
         }
 
         # 預設包含幸福理由

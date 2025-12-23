@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+import threading
 from io import BytesIO
 from pathlib import Path
 import google.generativeai as genai
@@ -65,10 +66,18 @@ class GeminiService:
             print(f"Error initializing MinIO: {e}", flush=True)
             self.minio_client = None
 
+        # 並發控制：Semaphore 限制同時最多 N 個 Imagen API 請求
+        self.imagen_semaphore = threading.Semaphore(
+            Config.MAX_CONCURRENT_IMAGE_GENERATION)
+        self.active_count = 0
+        self.queue_lock = threading.Lock()
+        print(
+            f"Image generation concurrency limit: {Config.MAX_CONCURRENT_IMAGE_GENERATION}", flush=True)
+
     def guess_gift(self, appearance, who_likes, usage_time):
         """根據描述猜測禮物"""
         if not self.model:
-            return "請設定 GEMINI_API_KEY"
+            raise Exception("Gemini API 未初始化，請設定 GEMINI_API_KEY 環境變數")
 
         prompt = f"""
         請根據以下線索猜測這是什麼禮物，只需要回答禮物名稱（中文，不超過10個字）：
@@ -85,8 +94,9 @@ class GeminiService:
             guess = response.text.strip()
             return guess
         except Exception as e:
-            print(f"Gemini API 錯誤: {str(e)}")
-            return "神秘禮物"
+            error_msg = f"Gemini API 猜測禮物失敗: {str(e)}"
+            print(f"✗ {error_msg}", flush=True)
+            raise Exception(error_msg)
 
     def generate_gift_image_prompt(self, gift_name, appearance, who_likes):
         """使用固定模板生成圖片描述提示詞"""
@@ -199,7 +209,7 @@ class GeminiService:
             return None
 
     def _generate_with_gemini(self, prompt):
-        """使用 Gemini Imagen 4.0 生成圖片並上傳到 MinIO"""
+        """使用 Gemini Imagen 4.0 生成圖片並上傳到 MinIO（含並發控制）"""
         if not self.genai_imagen_client:
             print("✗ Gemini Imagen client not initialized", flush=True)
             return None
@@ -208,7 +218,20 @@ class GeminiService:
             print("✗ MinIO client not initialized", flush=True)
             return None
 
+        # 使用 Semaphore 控制並發（含 timeout）
+        acquired = self.imagen_semaphore.acquire(
+            timeout=Config.IMAGE_GENERATION_TIMEOUT)
+        if not acquired:
+            raise TimeoutError(
+                f"等待圖片生成佇列超時 ({Config.IMAGE_GENERATION_TIMEOUT} 秒)")
+
         try:
+            # 更新活躍計數
+            with self.queue_lock:
+                self.active_count += 1
+            print(
+                f"🎨 開始生成圖片 (活躍: {self.active_count}/{Config.MAX_CONCURRENT_IMAGE_GENERATION})", flush=True)
+
             from google.genai import types
 
             # 使用 Imagen 4.0 生成圖片
@@ -267,6 +290,54 @@ class GeminiService:
         except ImportError as e:
             print(f"✗ Failed to import Gemini types: {e}", flush=True)
             return None
+        finally:
+            # 釋放 Semaphore 並更新計數
+            with self.queue_lock:
+                self.active_count -= 1
+            self.imagen_semaphore.release()
+            print(
+                f"✓ 圖片生成完成，釋放佇列位置 (活躍: {self.active_count}/{Config.MAX_CONCURRENT_IMAGE_GENERATION})", flush=True)
+
+    def generate_gift_image_with_retry(self, prompt, output_dir=None):
+        """生成圖片並自動重試（最多 N 次）"""
+        max_retries = Config.IMAGE_GENERATION_MAX_RETRIES
+        last_error = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    wait_time = attempt * 5  # exponential backoff: 5s, 10s
+                    print(f"⏳ 等待 {wait_time} 秒後重試...", flush=True)
+                    time.sleep(wait_time)
+                    print(f"🔄 重試第 {attempt} 次...", flush=True)
+
+                result = self.generate_gift_image(prompt, output_dir)
+                if result:
+                    if attempt > 0:
+                        print(f"✓ 重試成功！(第 {attempt} 次)", flush=True)
+                    return result, attempt  # 回傳結果與重試次數
+                else:
+                    raise Exception("圖片生成回傳 None")
+
+            except Exception as e:
+                last_error = e
+                print(
+                    f"✗ 圖片生成失敗 (嘗試 {attempt + 1}/{max_retries + 1}): {str(e)}", flush=True)
+                if attempt >= max_retries:
+                    print(f"✗ 已達最大重試次數 ({max_retries} 次)，放棄重試", flush=True)
+                    raise Exception(
+                        f"圖片生成失敗 (已重試 {max_retries} 次): {str(last_error)}")
+
+        raise Exception(f"圖片生成失敗: {str(last_error)}")
+
+    def get_queue_info(self):
+        """取得目前佇列資訊"""
+        with self.queue_lock:
+            return {
+                'active_count': self.active_count,
+                'max_concurrent': Config.MAX_CONCURRENT_IMAGE_GENERATION,
+                'available_slots': Config.MAX_CONCURRENT_IMAGE_GENERATION - self.active_count
+            }
 
 
 # 創建全局服務實例

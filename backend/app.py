@@ -73,10 +73,18 @@ def submit_form():
 
 @app.route('/api/generate-gift/<int:gift_id>', methods=['POST'])
 def generate_gift(gift_id):
-    """使用 AI 猜測禮物並生成圖片"""
+    """使用 AI 猜測禮物並生成圖片（含重試機制）"""
 
     try:
         gift = Gift.query.get_or_404(gift_id)
+
+        # 記錄開始生成
+        from datetime import datetime
+        gift.image_generation_status = 'processing'
+        gift.image_generation_started_at = datetime.utcnow()
+        gift.image_generation_error = None
+        gift.image_generation_retry_count = 0
+        db.session.commit()
 
         # 使用 Gemini 猜測禮物
         ai_guess = gemini_service.guess_gift(
@@ -92,20 +100,34 @@ def generate_gift(gift_id):
             gift.who_likes
         )
 
-        # 使用 AI 生成圖片並上傳到 MinIO
-        image_url = gemini_service.generate_gift_image(image_prompt)
-        if not image_url:
-            raise Exception("圖片生成失敗")
+        # 使用 AI 生成圖片並上傳到 MinIO（含自動重試）
+        try:
+            image_url, retry_count = gemini_service.generate_gift_image_with_retry(
+                image_prompt)
+            if not image_url:
+                raise Exception("圖片生成失敗")
 
-        # 更新禮物記錄 (image_url 已是完整的 MinIO URL)
-        gift.ai_guess = ai_guess
-        gift.image_url = image_url
-        db.session.commit()
+            # 更新禮物記錄
+            gift.ai_guess = ai_guess
+            gift.image_url = image_url
+            gift.image_generation_status = 'completed'
+            gift.image_generation_completed_at = datetime.utcnow()
+            gift.image_generation_retry_count = retry_count
+            db.session.commit()
 
-        return jsonify({
-            'message': 'AI 生成成功',
-            'gift': gift.to_dict()
-        }), 200
+            return jsonify({
+                'message': 'AI 生成成功',
+                'gift': gift.to_dict(),
+                'retry_count': retry_count
+            }), 200
+
+        except Exception as img_error:
+            # 圖片生成失敗，記錄錯誤
+            gift.image_generation_status = 'failed'
+            gift.image_generation_completed_at = datetime.utcnow()
+            gift.image_generation_error = str(img_error)
+            db.session.commit()
+            raise img_error
 
     except Exception as e:
         db.session.rollback()
@@ -114,9 +136,17 @@ def generate_gift(gift_id):
 
 @app.route('/api/regenerate/<int:gift_id>', methods=['POST'])
 def regenerate_gift(gift_id):
-    """重新生成禮物圖片"""
+    """重新生成禮物圖片（含重試機制）"""
     try:
         gift = Gift.query.get_or_404(gift_id)
+
+        # 記錄開始生成
+        from datetime import datetime
+        gift.image_generation_status = 'processing'
+        gift.image_generation_started_at = datetime.utcnow()
+        gift.image_generation_error = None
+        gift.image_generation_retry_count = 0
+        db.session.commit()
 
         # 重新猜測禮物
         ai_guess = gemini_service.guess_gift(
@@ -131,22 +161,58 @@ def regenerate_gift(gift_id):
             gift.appearance,
             gift.who_likes
         )
-        image_url = gemini_service.generate_gift_image(image_prompt)
-        if not image_url:
-            raise Exception("圖片生成失敗")
 
-        # 更新記錄 (image_url 已是完整的 MinIO URL)
-        gift.ai_guess = ai_guess
-        gift.image_url = image_url
-        db.session.commit()
+        try:
+            image_url, retry_count = gemini_service.generate_gift_image_with_retry(
+                image_prompt)
+            if not image_url:
+                raise Exception("圖片生成失敗")
 
-        return jsonify({
-            'message': '重新生成成功',
-            'gift': gift.to_dict()
-        }), 200
+            # 更新記錄
+            gift.ai_guess = ai_guess
+            gift.image_url = image_url
+            gift.image_generation_status = 'completed'
+            gift.image_generation_completed_at = datetime.utcnow()
+            gift.image_generation_retry_count = retry_count
+            db.session.commit()
+
+            return jsonify({
+                'message': '重新生成成功',
+                'gift': gift.to_dict(),
+                'retry_count': retry_count
+            }), 200
+
+        except Exception as img_error:
+            # 圖片生成失敗，記錄錯誤
+            gift.image_generation_status = 'failed'
+            gift.image_generation_completed_at = datetime.utcnow()
+            gift.image_generation_error = str(img_error)
+            db.session.commit()
+            raise img_error
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/gift/<int:gift_id>/generation-status', methods=['GET'])
+def get_generation_status(gift_id):
+    """查詢禮物圖片生成狀態"""
+    try:
+        gift = Gift.query.get_or_404(gift_id)
+        queue_info = gemini_service.get_queue_info()
+
+        return jsonify({
+            'gift_id': gift.id,
+            'status': gift.image_generation_status,
+            'started_at': gift.image_generation_started_at.isoformat() if gift.image_generation_started_at else None,
+            'completed_at': gift.image_generation_completed_at.isoformat() if gift.image_generation_completed_at else None,
+            'error': gift.image_generation_error,
+            'retry_count': gift.image_generation_retry_count,
+            'queue_info': queue_info
+        }), 200
+
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 

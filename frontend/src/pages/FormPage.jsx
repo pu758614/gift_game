@@ -7,6 +7,7 @@ function FormPage() {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [generationStatus, setGenerationStatus] = useState(null);
 
   const [formData, setFormData] = useState({
     player_name: '',
@@ -23,6 +24,47 @@ function FormPage() {
       setFormData(location.state.formData);
     }
   }, [location.state]);
+
+  // 輪詢查詢圖片生成狀態
+  useEffect(() => {
+    let pollInterval = null;
+
+    if (loading && generationStatus?.giftId) {
+      pollInterval = setInterval(async () => {
+        try {
+          const response = await giftAPI.getGenerationStatus(generationStatus.giftId);
+          const status = response.data;
+
+          setGenerationStatus({
+            ...generationStatus,
+            status: status.status,
+            retryCount: status.retry_count,
+            error: status.error,
+            queueInfo: status.queue_info
+          });
+
+          // 如果完成或失敗，停止輪詢並導航
+          if (status.status === 'completed') {
+            clearInterval(pollInterval);
+            setLoading(false);
+            navigate(`/confirm/${generationStatus.giftId}`);
+          } else if (status.status === 'failed') {
+            clearInterval(pollInterval);
+            setLoading(false);
+            setError(`圖片生成失敗: ${status.error || '未知錯誤'}`);
+          }
+        } catch (err) {
+          console.error('輪詢狀態錯誤:', err);
+        }
+      }, 2000); // 每2秒查詢一次
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [loading, generationStatus, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -41,19 +83,36 @@ function FormPage() {
       const submitResponse = await giftAPI.submitForm(formData);
       const giftId = submitResponse.data.gift_id;
 
-      // 生成禮物圖片
+      // 開始生成禮物圖片（非同步）
+      setGenerationStatus({ giftId, status: 'processing', retryCount: 0 });
       await giftAPI.generateGift(giftId);
 
-      // 導航到確認頁面
-      navigate(`/confirm/${giftId}`);
+      // 輪詢機制會自動處理後續導航
     } catch (err) {
       console.error('提交錯誤:', err);
       console.error('錯誤詳情:', err.response);
       const errorMsg = err.response?.data?.error || err.message || '提交失敗，請稍後再試';
       setError(`錯誤: ${errorMsg}`);
-    } finally {
       setLoading(false);
     }
+  };
+
+  // 動態顯示 loading 訊息
+  const getLoadingMessage = () => {
+    if (!generationStatus) return 'AI 正在努力畫畫中';
+
+    if (generationStatus.status === 'processing') {
+      if (generationStatus.retryCount > 0) {
+        return `重試中 (第 ${generationStatus.retryCount} 次)`;
+      }
+      const queueInfo = generationStatus.queueInfo;
+      if (queueInfo && queueInfo.available_slots === 0) {
+        return `等候中... (目前 ${queueInfo.active_count} 人在使用)`;
+      }
+      return 'AI 正在努力畫畫中';
+    }
+
+    return 'AI 正在努力畫畫中';
   };
 
   return (
@@ -87,7 +146,7 @@ function FormPage() {
             marginBottom: '10px',
             textAlign: 'center'
           }}>
-            AI 正在努力畫畫中
+            {getLoadingMessage()}
           </h2>
           <div style={{
             color: 'white',

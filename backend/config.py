@@ -42,3 +42,11 @@ class Config:
 
     # CORS 設定 - 允許所有來源以支援手機瀏覽
     CORS_ORIGINS = '*'
+
+    # 圖片生成並發控制設定
+    MAX_CONCURRENT_IMAGE_GENERATION = int(
+        os.getenv('MAX_CONCURRENT_IMAGE_GENERATION', 5))
+    IMAGE_GENERATION_TIMEOUT = int(
+        os.getenv('IMAGE_GENERATION_TIMEOUT', 300))  # 秒
+    IMAGE_GENERATION_MAX_RETRIES = int(
+        os.getenv('IMAGE_GENERATION_MAX_RETRIES', 2))
