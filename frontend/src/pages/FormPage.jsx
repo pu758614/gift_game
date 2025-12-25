@@ -99,7 +99,7 @@ function FormPage() {
 
   // 動態顯示 loading 訊息
   const getLoadingMessage = () => {
-    if (!generationStatus) return 'AI 正在努力畫畫中';
+    if (!generationStatus) return 'AI 正在努力畫畫中，畫面請不要關掉喔！';
 
     if (generationStatus.status === 'processing') {
       if (generationStatus.retryCount > 0) {
@@ -109,10 +109,10 @@ function FormPage() {
       if (queueInfo && queueInfo.available_slots === 0) {
         return `等候中... (目前 ${queueInfo.active_count} 人在使用)`;
       }
-      return 'AI 正在努力畫畫中';
+      return 'AI 正在努力畫畫中，畫面請不要關掉喔！';
     }
 
-    return 'AI 正在努力畫畫中';
+    return 'AI 正在努力畫畫中，畫面請不要關掉喔！';
   };
 
   return (
@@ -198,7 +198,7 @@ function FormPage() {
 
           <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="player_name">1. 你的名字 *</label>
+            <label htmlFor="player_name">1. 我的名字 *</label>
             <input
               type="text"
               id="player_name"
@@ -211,7 +211,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="gift_name">2. 這個禮物是什麼？*</label>
+            <label htmlFor="gift_name">2. 我的禮物是什麼？*</label>
             <input
               type="text"
               id="gift_name"
@@ -223,7 +223,7 @@ function FormPage() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="happiness_reason">3. 收到的人會因為這禮物而發出什麼讚嘆？*</label>
+            <label htmlFor="happiness_reason">3. 收到的人會因為我的禮物而發出什麼讚嘆？*</label>
             <textarea
               id="happiness_reason"
               name="happiness_reason"
@@ -234,7 +234,7 @@ function FormPage() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="appearance">4. 你這個禮物的外型或材質是什麼？*</label>
+            <label htmlFor="appearance">4. 我的禮物的外型或材質是什麼？*</label>
             <textarea
               id="appearance"
               name="appearance"
@@ -246,7 +246,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="who_likes">5. 你這個禮物通常是什麼人會喜歡的？*</label>
+            <label htmlFor="who_likes">5. 我的禮物通常是什麼人會喜歡的？*</label>
             <textarea
               id="who_likes"
               name="who_likes"
@@ -258,7 +258,7 @@ function FormPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="usage_time">6. 你這個禮物通常是在什麼時候使用？*</label>
+            <label htmlFor="usage_time">6. 我的禮物通常是在什麼時候使用？*</label>
             <textarea
               id="usage_time"
               name="usage_time"

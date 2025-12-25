@@ -277,6 +277,73 @@ function GalleryPage() {
         pointerEvents: 'none'
       }} />
 
+      {/* 填寫禮物表單 QR Code */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        left: '20px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        padding: '13px',
+        borderRadius: '10px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+        zIndex: 100,
+        textAlign: 'center'
+      }}>
+        <div style={{
+          fontSize: '12px',
+          fontWeight: 'bold',
+          color: '#667eea',
+          marginTop: '7px'
+        }}>
+          📝 填寫禮物表單
+        </div>
+        <br />
+        <img
+          src="/form_qr.png"
+          alt="填寫禮物表單 QR Code"
+          style={{
+            width: '133px',
+            height: '133px',
+            display: 'block',
+            marginBottom: '7px',
+            borderRadius: '5px'
+          }}
+        />
+
+      </div>
+
+      {/* WiFi 資訊 */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        padding: '13px',
+        borderRadius: '10px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+        zIndex: 100,
+        textAlign: 'center'
+      }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#667eea', fontSize: '15px' }}>
+          📶 WiFi
+        </div>
+        <img
+          src="/wifi.jpg"
+          alt="WiFi QR Code"
+          style={{
+            width: '133px',
+            height: '133px',
+            display: 'block',
+            margin: '0 auto 10px',
+            borderRadius: '5px'
+          }}
+        />
+        <div style={{ fontSize: '12px', fontFamily: 'monospace', lineHeight: '1.6', color: '#333' }}>
+          <div style={{ fontSize: '12px' }}><strong>名稱:</strong> DoDo</div>
+          <div style={{ fontSize: '12px' }}><strong>密碼:</strong> 073419215</div>
+        </div>
+      </div>
+
       {error && (
         <div className="error" style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
           {error}

@@ -4,6 +4,7 @@ import ConfirmPage from './pages/ConfirmPage'
 import SuccessPage from './pages/SuccessPage'
 import GalleryPage from './pages/GalleryPage'
 import ExchangePage from './pages/ExchangePage'
+import PeekPage from './pages/PeekPage'
 import VotingPage from './pages/VotingPage'
 import ResultPage from './pages/ResultPage'
 
@@ -15,6 +16,7 @@ function App() {
       <Route path="/success/:giftId" element={<SuccessPage />} />
       <Route path="/gallery" element={<GalleryPage />} />
       <Route path="/exchange" element={<ExchangePage />} />
+      <Route path="/peek" element={<PeekPage />} />
       <Route path="/voting" element={<VotingPage />} />
       <Route path="/result" element={<ResultPage />} />
     </Routes>
