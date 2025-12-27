@@ -18,9 +18,11 @@ function ExchangePage() {
   const loadGifts = async () => {
     try {
       const response = await giftAPI.getAllGifts();
+      console.log('All gifts from API:', response.data.gifts);
+      console.log('Total gifts count:', response.data.gifts.length);
       setGifts(response.data.gifts);
     } catch (err) {
-      setError('載入失敗，請稍後再試');
+      setError('載入失敗,請稍後再試');
     } finally {
       setLoading(false);
     }
@@ -76,12 +78,21 @@ function ExchangePage() {
 
   const availableGifts = gifts.filter(g => !g.is_exchanged);
 
+  console.log('Total gifts:', gifts.length);
+  console.log('Available gifts (not exchanged):', availableGifts.length);
+  console.log('Available gifts:', availableGifts);
+
   return (
     <div className="container">
       <h1>🎲 開始交換禮物</h1>
 
       <div className="card">
-        <h2 style={{ marginBottom: '24px' }}>選擇你想要的禮物</h2>
+        <h2 style={{ marginBottom: '24px' }}>
+          選擇你想要的禮物
+          <span style={{ fontSize: '1rem', color: '#999', marginLeft: '10px' }}>
+            (共 {gifts.length} 個禮物, {availableGifts.length} 個可選擇)
+          </span>
+        </h2>
 
         {error && <div className="error">{error}</div>}
 

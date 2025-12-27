@@ -64,11 +64,8 @@
 }
 
 .creative-title {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+  color: #fff;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
 }
 
 .blessing-title {
@@ -112,24 +109,33 @@
   min-height: 350px;
 }
 
-/* 有排名時，按照名次排列 */
+/* 有排名時，按照名次排列 - 頒獎台樣式 */
 .podium-item.rank-1 {
   order: 2;
-  min-height: 400px;
+  min-height: 500px;
+  margin-bottom: 0;
   transform-origin: bottom;
   animation: growToFirst 1s ease-out forwards;
+  background: linear-gradient(145deg, #fff5e1 0%, #ffffff 100%);
+  border: 3px solid #FFD700;
 }
 
 .podium-item.rank-2 {
   order: 1;
-  min-height: 350px;
+  min-height: 380px;
+  margin-bottom: 0;
   animation: moveToSecond 1s ease-out forwards;
+  background: linear-gradient(145deg, #f5f5f5 0%, #ffffff 100%);
+  border: 3px solid #C0C0C0;
 }
 
 .podium-item.rank-3 {
   order: 3;
-  min-height: 300px;
+  min-height: 280px;
+  margin-bottom: 0;
   animation: moveToThird 1s ease-out forwards;
+  background: linear-gradient(145deg, #ffeedd 0%, #ffffff 100%);
+  border: 3px solid #CD7F32;
 }
 
 .rank-badge {
@@ -349,47 +355,124 @@
 @keyframes growToFirst {
   from {
     min-height: 350px;
+    transform: scale(0.95);
   }
   to {
-    min-height: 400px;
+    min-height: 500px;
+    transform: scale(1.05);
   }
 }
 
 @keyframes moveToSecond {
   0% {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 0.8;
   }
   100% {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
 @keyframes moveToThird {
   0% {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 0.8;
   }
   100% {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
 /* 響應式設計 */
 @media (max-width: 1024px) {
   .podium {
-    flex-direction: column;
-    align-items: center;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 1rem;
   }
 
   .podium-item {
-    width: 100%;
-    max-width: 400px;
+    width: 30%;
+    min-width: 200px;
   }
 
-  .podium-item.rank-1,
-  .podium-item.rank-2,
+  .podium-item.rank-1 {
+    min-height: 380px;
+    margin-bottom: 0;
+  }
+
+  .podium-item.rank-2 {
+    min-height: 300px;
+    margin-bottom: 0;
+  }
+
   .podium-item.rank-3 {
-    order: initial;
-    min-height: auto;
+    min-height: 230px;
+    margin-bottom: 0;
+  }
+
+  .gift-image-wrapper {
+    width: 150px;
+    height: 150px;
+  }
+
+  .gift-name {
+    font-size: 1.2rem;
+  }
+
+  .gift-player {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .podium {
+    gap: 0.5rem;
+  }
+
+  .podium-item {
+    padding: 1rem;
+    min-width: 150px;
+  }
+
+  .podium-item.rank-1 {
+    min-height: 320px;
+    margin-bottom: 0;
+  }
+
+  .podium-item.rank-2 {
+    min-height: 260px;
+    margin-bottom: 0;
+  }
+
+  .podium-item.rank-3 {
+    min-height: 200px;
+    margin-bottom: 0;
+  }
+
+  .gift-image-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
+  .gift-name {
+    font-size: 1rem;
+  }
+
+  .gift-player {
+    font-size: 0.8rem;
+  }
+
+  .vote-number {
+    font-size: 2rem;
+  }
+
+  .rank-badge {
+    width: 45px;
+    height: 45px;
+    font-size: 1.5rem;
   }
 }
 

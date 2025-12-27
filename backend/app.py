@@ -236,10 +236,10 @@ def confirm_gift(gift_id):
 
 @app.route('/api/gifts', methods=['GET'])
 def get_gifts():
-    """取得所有已確認的禮物"""
+    """取得所有禮物"""
     try:
-        # 只返回已確認的禮物
-        gifts = Gift.query.filter_by(is_confirmed=True).all()
+        # 返回所有禮物(包含未確認的)
+        gifts = Gift.query.all()
 
         return jsonify({
             'gifts': [gift.to_dict() for gift in gifts],
@@ -416,7 +416,7 @@ def get_voting_results():
     """獲取投票結果"""
     try:
         # 獲取所有禮物及其票數
-        gifts = Gift.query.filter_by(is_confirmed=True).all()
+        gifts = Gift.query.all()
 
         results = []
         for gift in gifts:

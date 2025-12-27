@@ -6,6 +6,7 @@ import GalleryPage from './pages/GalleryPage'
 import ExchangePage from './pages/ExchangePage'
 import PeekPage from './pages/PeekPage'
 import VotingPage from './pages/VotingPage'
+import VoteCompletePage from './pages/VoteCompletePage'
 import ResultPage from './pages/ResultPage'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
       <Route path="/exchange" element={<ExchangePage />} />
       <Route path="/peek" element={<PeekPage />} />
       <Route path="/voting" element={<VotingPage />} />
+      <Route path="/vote-complete" element={<VoteCompletePage />} />
       <Route path="/result" element={<ResultPage />} />
     </Routes>
   )

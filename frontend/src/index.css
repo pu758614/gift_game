@@ -149,8 +149,8 @@ h2 {
 /* 禮物網格 */
 .gifts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
   margin-top: 24px;
   position: relative;
   width: 100%;
@@ -347,8 +347,8 @@ h2 {
   }
 
   .gifts-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
   }
 
   .button-group {

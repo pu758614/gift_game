@@ -66,7 +66,7 @@ const ResultPage = () => {
       const targetVotes = gift.creative_votes;
 
       let currentVotes = 0;
-      const duration = 2000; // 2秒
+      const duration = 1000; // 1秒
       const steps = 50;
       const increment = targetVotes / steps;
       const stepDuration = duration / steps;
@@ -108,7 +108,7 @@ const ResultPage = () => {
       const targetVotes = gift.blessing_votes;
 
       let currentVotes = 0;
-      const duration = 2000;
+      const duration = 1000;
       const steps = 50;
       const increment = targetVotes / steps;
       const stepDuration = duration / steps;

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getFingerprint } from '../utils/fingerprint';
 import { giftAPI, getFullImageUrl } from '../api';
 import './VotingPage.css';
 
 const VotingPage = () => {
+  const navigate = useNavigate();
   const [gifts, setGifts] = useState([]);
   const [votingStatus, setVotingStatus] = useState({
     creative: { voted_gift_ids: [], remaining_votes: 3 },
@@ -100,8 +102,12 @@ const VotingPage = () => {
 
   // 顯示確認對話框
   const handleSubmitClick = () => {
-    if (selectedCreative.length === 0 && selectedBlessing.length === 0) {
-      alert('請至少選擇一個禮物進行投票');
+    if (selectedCreative.length !== 3) {
+      alert('請選滿 3 個最佳創意獎');
+      return;
+    }
+    if (selectedBlessing.length !== 3) {
+      alert('請選滿 3 個最佳祝福獎');
       return;
     }
     setShowConfirmDialog(true);
@@ -121,14 +127,14 @@ const VotingPage = () => {
         await giftAPI.submitVote(giftId, 'blessing', fingerprint);
       }
 
-      // 清空選擇
-      setSelectedCreative([]);
-      setSelectedBlessing([]);
+      // 準備投票結果資料
+      const votedGifts = {
+        creative: selectedCreative.map(giftId => gifts.find(g => g.id === giftId)),
+        blessing: selectedBlessing.map(giftId => gifts.find(g => g.id === giftId))
+      };
 
-      // 重新載入頁面資料
-      await initializePage();
-
-      alert('投票成功！');
+      // 導向投票完成頁面
+      navigate('/vote-complete', { state: { votedGifts } });
     } catch (err) {
       console.error('Vote failed:', err);
       alert(err.response?.data?.error || '投票失敗');
@@ -158,28 +164,28 @@ const VotingPage = () => {
     const isAlreadyVoted = votingStatus[awardType].voted_gift_ids.includes(gift.id);
 
     return (
-      <div
-        key={gift.id}
-        className={`gift-card ${isSelected ? 'selected' : ''} ${isAlreadyVoted ? 'already-voted' : ''}`}
-        onClick={() => !isAlreadyVoted && toggleSelection(gift.id, awardType)}
-      >
-        <div className="gift-image-container">
-          <img
-            src={getFullImageUrl(gift.image_url)}
-            alt={gift.gift_name || '禮物'}
-            className="gift-image"
-          />
-          {isAlreadyVoted && (
-            <div className="already-voted-badge">✓ 已投過</div>
-          )}
-          {isSelected && !isAlreadyVoted && (
-            <div className="selected-badge">✓ 已選擇</div>
-          )}
+      <div key={gift.id} className="gift-item">
+        <div
+          className={`gift-card ${isSelected ? 'selected' : ''} ${isAlreadyVoted ? 'already-voted' : ''}`}
+          onClick={() => !isAlreadyVoted && toggleSelection(gift.id, awardType)}
+        >
+          <div className="gift-image-container">
+            <img
+              src={getFullImageUrl(gift.image_url)}
+              alt={gift.gift_name || '禮物'}
+              className="gift-image"
+            />
+            {isAlreadyVoted && (
+              <div className="already-voted-badge">✓ 已投過</div>
+            )}
+            {isSelected && !isAlreadyVoted && (
+              <div className="selected-badge">✓ 已選擇</div>
+            )}
+          </div>
         </div>
-
         <div className="gift-info">
           <h3 className="gift-name">{gift.gift_name || '神秘禮物'}</h3>
-          <p className="gift-player">{gift.player_name} 的禮物</p>
+          <p className="gift-player">{gift.player_name}</p>
         </div>
       </div>
     );
@@ -225,13 +231,15 @@ const VotingPage = () => {
       </section>
 
       {/* 送出按鈕 */}
-      {(selectedCreative.length > 0 || selectedBlessing.length > 0) && (
-        <div className="submit-container">
-          <button className="submit-btn" onClick={handleSubmitClick}>
-            送出投票
-          </button>
-        </div>
-      )}
+      <div className="submit-container">
+        <button
+          className="submit-btn"
+          onClick={handleSubmitClick}
+          disabled={selectedCreative.length !== 3 || selectedBlessing.length !== 3}
+        >
+          送出投票 ({selectedCreative.length + selectedBlessing.length}/6)
+        </button>
+      </div>
 
       {/* 確認對話框 */}
       {showConfirmDialog && (
